@@ -67,7 +67,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
                 <Boxes className="h-4 w-4 text-zinc-100" />
               </div>
               <span className="text-sm font-semibold tracking-tighter text-zinc-100">
-                Gemini <span className="text-zinc-500 font-medium">Design</span>
+                Gemini <span className="text-zinc-500 font-medium">Design MCP</span>
               </span>
             </Link>
 

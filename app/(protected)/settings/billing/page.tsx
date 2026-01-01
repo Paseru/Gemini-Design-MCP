@@ -5,44 +5,33 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import {
   CreditCard,
-  Zap,
-  Check,
+  CheckCircle2,
   ArrowUpRight,
-  Crown,
-  Sparkles,
+  Zap,
 } from "lucide-react";
 
 const PLANS = [
   {
     id: "free",
-    name: "Free",
+    name: "Starter",
     price: 0,
-    tokens: 30_000,
-    features: ["30K tokens/month", "Basic support"],
+    desc: "Perfect for experimenting with the MCP protocol.",
+    features: ["30K Tokens / month", "Standard Latency", "Community Support", "Any IDE support"],
   },
   {
     id: "pro",
-    name: "Pro",
+    name: "Professional",
     price: 19,
-    tokens: 500_000,
-    features: [
-      "500K tokens/month",
-      "Priority support",
-      "Usage analytics",
-    ],
+    desc: "For engineers who demand precision and speed daily.",
+    features: ["500K Tokens / month", "Priority Queue", "Full app scaffolding", "Email Support"],
     popular: true,
   },
   {
     id: "enterprise",
     name: "Enterprise",
     price: 79,
-    tokens: 3_000_000,
-    features: [
-      "3M tokens/month",
-      "Dedicated support",
-      "Advanced analytics",
-      "Custom integrations",
-    ],
+    desc: "Custom tooling for teams requiring governance and scale.",
+    features: ["3M Tokens / month", "Ultra-low latency", "Team token pooling", "24/7 Priority Support"],
   },
 ];
 
@@ -127,8 +116,8 @@ export default function BillingPage() {
       <section className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-lg">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 flex items-center justify-center bg-zinc-100 text-zinc-950 rounded">
-              <Sparkles size={18} />
+            <div className="w-10 h-10 flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded">
+              <Zap size={16} className="text-zinc-400" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
@@ -178,43 +167,38 @@ export default function BillingPage() {
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`relative bg-zinc-950 border p-5 flex flex-col transition-all duration-300 rounded-lg ${
+              className={`relative p-5 rounded-lg border flex flex-col h-full overflow-hidden group ${
                 plan.popular
-                  ? "border-zinc-100 shadow-[0_0_20px_rgba(255,255,255,0.03)]"
-                  : "border-zinc-800 hover:border-zinc-700"
+                  ? "border-zinc-100 bg-zinc-900 shadow-[0_0_20px_rgba(255,255,255,0.03)]"
+                  : "border-zinc-800 bg-zinc-950"
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-zinc-100 text-zinc-950 text-[9px] font-medium uppercase tracking-widest rounded">
-                  Popular
+                <div className="absolute top-0 right-0 p-3">
+                  <span className="bg-zinc-100 text-zinc-950 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter">Popular</span>
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mb-4">
-                {plan.id === "enterprise" ? (
-                  <Crown size={14} className="text-amber-400" />
-                ) : plan.id === "pro" ? (
-                  <Sparkles size={14} className="text-zinc-400" />
-                ) : (
-                  <Zap size={14} className="text-zinc-600" />
-                )}
-                <h3 className="text-xs font-medium text-zinc-100 uppercase tracking-widest">{plan.name}</h3>
-              </div>
+              <p className={`text-[9px] uppercase tracking-widest font-bold mb-2 ${plan.popular ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                {plan.name}
+              </p>
 
-              <div className="mb-4">
-                <span className="text-xl font-extralight text-zinc-100">
-                  ${plan.price}
+              <div className="flex items-baseline gap-0.5 mb-4">
+                <span className={`text-2xl font-light tracking-tighter ${plan.popular ? 'text-zinc-100' : 'text-zinc-300'}`}>
+                  {plan.price === 0 ? "Free" : `$${plan.price}`}
                 </span>
-                <span className="text-[10px] text-zinc-500 ml-1 uppercase">/month</span>
+                {plan.price !== 0 && <span className="text-zinc-600 text-[10px]">/mo</span>}
               </div>
 
-              <ul className="space-y-2 mb-5 flex-1">
+              <p className="text-[11px] text-zinc-500 mb-5 leading-relaxed">{plan.desc}</p>
+
+              <ul className="space-y-2.5 mb-6 flex-grow">
                 {plan.features.map((feature, i) => (
                   <li
                     key={i}
-                    className="flex items-center gap-2 text-[11px] text-zinc-400 font-light"
+                    className="flex items-center gap-2 text-[10px] text-zinc-400"
                   >
-                    <Check size={12} className="text-zinc-100" />
+                    <CheckCircle2 className={`w-3 h-3 ${plan.popular ? 'text-zinc-100' : 'text-zinc-600'}`} />
                     {feature}
                   </li>
                 ))}
@@ -223,29 +207,27 @@ export default function BillingPage() {
               {plan.id === "free" ? (
                 <button
                   disabled
-                  className="w-full h-9 text-[10px] bg-zinc-800 text-zinc-500 uppercase tracking-widest cursor-not-allowed rounded"
+                  className="w-full py-2.5 rounded text-xs font-medium bg-zinc-900 text-zinc-500 border border-zinc-800 cursor-not-allowed"
                 >
                   {subscription?.tier === "free" ? "Current Plan" : "Downgrade via Portal"}
                 </button>
               ) : (
                 <button
                   onClick={() => handleUpgrade(plan.id as "pro" | "enterprise")}
-                  disabled={
-                    loading === plan.id || subscription?.tier === plan.id
-                  }
-                  className={`w-full h-9 text-[10px] uppercase tracking-widest transition-all rounded font-medium ${
+                  disabled={loading === plan.id || subscription?.tier === plan.id}
+                  className={`w-full py-2.5 rounded text-xs font-medium transition-all ${
                     subscription?.tier === plan.id
-                      ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                      ? "bg-zinc-900 text-zinc-500 border border-zinc-800 cursor-not-allowed"
                       : plan.popular
-                      ? "bg-zinc-100 hover:bg-white text-zinc-950"
-                      : "bg-zinc-800 hover:bg-zinc-700 text-zinc-100"
+                      ? "bg-zinc-100 text-zinc-950 hover:bg-white"
+                      : "bg-zinc-900 text-zinc-100 border border-zinc-800 hover:bg-zinc-800"
                   }`}
                 >
                   {loading === plan.id
                     ? "Loading..."
                     : subscription?.tier === plan.id
                     ? "Current Plan"
-                    : "Upgrade"}
+                    : plan.id === "enterprise" ? "Contact Sales" : "Go Pro"}
                 </button>
               )}
             </div>
