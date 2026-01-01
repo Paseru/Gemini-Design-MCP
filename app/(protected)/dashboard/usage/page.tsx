@@ -21,59 +21,59 @@ export default function UsagePage() {
   const maxTokens = Math.max(...(dailyUsage?.map((d) => d.tokens) || [1]));
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
-      <header className="border-b border-zinc-800 pb-8">
-        <h1 className="text-4xl font-extralight tracking-tighter text-zinc-100 mb-2">
+      <header className="border-b border-zinc-800 pb-6">
+        <h1 className="text-xl md:text-2xl font-extralight tracking-tighter text-zinc-100 mb-1">
           Usage Statistics
         </h1>
-        <p className="text-zinc-500 font-light">
+        <p className="text-xs text-zinc-500 font-light">
           Monitor your API usage and consumption
         </p>
       </header>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-zinc-900/50 border border-zinc-800 p-8 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
-              <Activity size={18} strokeWidth={1.5} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
+              <Activity size={16} strokeWidth={1.5} />
             </div>
             <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
               Total Requests
             </span>
           </div>
-          <p className="text-3xl font-extralight text-zinc-100">
+          <p className="text-xl font-extralight text-zinc-100">
             {(stats?.last30Days?.totalRequests ?? 0).toLocaleString()}
           </p>
           <p className="text-[11px] text-zinc-500 mt-2 font-light">Last 30 days</p>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800 p-8 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
-              <Zap size={18} strokeWidth={1.5} />
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
+              <Zap size={16} strokeWidth={1.5} />
             </div>
             <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
               Tokens Used
             </span>
           </div>
-          <p className="text-3xl font-extralight text-zinc-100">
+          <p className="text-xl font-extralight text-zinc-100">
             {(stats?.last30Days?.totalOutputTokens ?? 0).toLocaleString()}
           </p>
           <p className="text-[11px] text-zinc-500 mt-2 font-light">Output tokens</p>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800 p-8 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
-              <TrendingUp size={18} strokeWidth={1.5} />
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
+              <TrendingUp size={16} strokeWidth={1.5} />
             </div>
             <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
               Success Rate
             </span>
           </div>
-          <p className="text-3xl font-extralight text-zinc-100">
+          <p className="text-xl font-extralight text-zinc-100">
             {stats?.last30Days?.totalRequests
               ? Math.round(
                   (stats.last30Days.successfulRequests / stats.last30Days.totalRequests) * 100
@@ -86,16 +86,16 @@ export default function UsagePage() {
           </p>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800 p-8 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
-              <Clock size={18} strokeWidth={1.5} />
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 group hover:border-zinc-700 transition-all duration-500 rounded-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-zinc-800 group-hover:bg-zinc-100 group-hover:text-zinc-950 transition-colors rounded">
+              <Clock size={16} strokeWidth={1.5} />
             </div>
             <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
               Est. Cost
             </span>
           </div>
-          <p className="text-3xl font-extralight text-zinc-100">
+          <p className="text-xl font-extralight text-zinc-100">
             ${(stats?.last30Days?.totalCost ?? 0).toFixed(2)}
           </p>
           <p className="text-[11px] text-zinc-500 mt-2 font-light">Your savings this month</p>
@@ -103,11 +103,11 @@ export default function UsagePage() {
       </div>
 
       {/* Usage Chart */}
-      <section className="bg-zinc-900/50 border border-zinc-800 p-10 rounded-lg">
-        <h2 className="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mb-8">
+      <section className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-lg">
+        <h2 className="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mb-5">
           Daily Token Usage (Last 30 Days)
         </h2>
-        <div className="flex items-end gap-1 h-48">
+        <div className="flex items-end gap-1 h-32">
           {dailyUsage && dailyUsage.length > 0 ? (
             dailyUsage.map((day, i) => (
               <div
@@ -123,12 +123,12 @@ export default function UsagePage() {
               </div>
             ))
           ) : (
-            <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm font-light">
+            <div className="flex-1 flex items-center justify-center text-zinc-500 text-xs font-light">
               No usage data yet
             </div>
           )}
         </div>
-        <div className="flex justify-between mt-6 text-[10px] text-zinc-500 uppercase tracking-widest">
+        <div className="flex justify-between mt-4 text-[10px] text-zinc-500 uppercase tracking-widest">
           <span>30 days ago</span>
           <span>Today</span>
         </div>
@@ -136,7 +136,7 @@ export default function UsagePage() {
 
       {/* Usage Log */}
       <section className="bg-zinc-900/50 border border-zinc-800 overflow-hidden rounded-lg">
-        <div className="h-12 border-b border-zinc-800 flex items-center px-6 bg-zinc-950/50">
+        <div className="h-10 border-b border-zinc-800 flex items-center px-4 bg-zinc-950/50">
           <span className="text-[11px] font-medium uppercase tracking-widest text-zinc-500">
             Request Log
           </span>
@@ -146,25 +146,25 @@ export default function UsagePage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-950/30">
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500">
                   Timestamp
                 </th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500">
                   Endpoint
                 </th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
                   Input
                 </th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
                   Output
                 </th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-center">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-center">
                   Billed From
                 </th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
                   Cost
                 </th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
+                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
                   Status
                 </th>
               </tr>
@@ -176,19 +176,19 @@ export default function UsagePage() {
                     key={idx}
                     className="hover:bg-zinc-800/50 transition-colors"
                   >
-                    <td className="px-6 py-5 text-xs text-zinc-500 font-light">
+                    <td className="px-4 py-3 text-xs text-zinc-500 font-light">
                       {formatDate(log.createdAt)}
                     </td>
-                    <td className="px-6 py-5 text-xs text-zinc-100 font-mono">
+                    <td className="px-4 py-3 text-xs text-zinc-100 font-mono">
                       {log.endpoint}
                     </td>
-                    <td className="px-6 py-5 text-xs text-zinc-500 text-right font-light">
+                    <td className="px-4 py-3 text-xs text-zinc-500 text-right font-light">
                       {log.inputTokens.toLocaleString()}
                     </td>
-                    <td className="px-6 py-5 text-xs text-zinc-500 text-right font-light">
+                    <td className="px-4 py-3 text-xs text-zinc-500 text-right font-light">
                       {log.outputTokens.toLocaleString()}
                     </td>
-                    <td className="px-6 py-5 text-center">
+                    <td className="px-4 py-3 text-center">
                       <span
                         className={`px-3 py-1 text-[9px] uppercase tracking-widest font-medium rounded ${
                           log.billedFrom === "quota"
@@ -199,10 +199,10 @@ export default function UsagePage() {
                         {log.billedFrom}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-xs text-zinc-100 text-right font-medium">
+                    <td className="px-4 py-3 text-xs text-zinc-100 text-right font-medium">
                       ${log.costUsd.toFixed(4)}
                     </td>
-                    <td className="px-6 py-5 text-right">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div
                           className={`w-1.5 h-1.5 rounded-full ${
@@ -222,7 +222,7 @@ export default function UsagePage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center text-zinc-500 text-sm font-light">
+                  <td colSpan={7} className="px-4 py-10 text-center text-zinc-500 text-xs font-light">
                     No requests yet
                   </td>
                 </tr>
