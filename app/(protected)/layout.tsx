@@ -53,10 +53,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   return (
     <div className="relative min-h-screen bg-zinc-950 selection:bg-zinc-100 selection:text-zinc-900">
-      {/* Background Grid Pattern - Subtle Engineering Look */}
-      <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]" 
-           style={{ backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`, size: '40px 40px', backgroundSize: '40px 40px' }} 
-      />
+      {/* Background Pattern Removed - Minimalist Dashboard Style */}
       
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-zinc-900/50 bg-zinc-950/80 backdrop-blur-md">
