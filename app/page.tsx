@@ -203,6 +203,104 @@ const SectionHeading = ({ title, subtitle, align = 'center' }: { title: string, 
   </div>
 );
 
+// Video Demo Component with selectors
+const VideoDemo = () => {
+  const [selectedIDE, setSelectedIDE] = useState<'codex' | 'claude'>('claude');
+  const [codexOption, setCodexOption] = useState<'without' | 'with'>('with');
+  const [claudeOption, setClaudeOption] = useState<'without' | 'skill' | 'with'>('with');
+
+  const getVideoSrc = () => {
+    if (selectedIDE === 'codex') {
+      return codexOption === 'without' ? '/videos/codex-without.mp4' : '/videos/codex-with.mp4';
+    } else {
+      if (claudeOption === 'without') return '/videos/claude-without.mp4';
+      if (claudeOption === 'skill') return '/videos/claude-skill.mp4';
+      return '/videos/claude-with.mp4';
+    }
+  };
+
+  const ideOptions = [
+    { id: 'codex' as const, label: 'Codex' },
+    { id: 'claude' as const, label: 'Claude Code' },
+  ];
+
+  const codexSubOptions = [
+    { id: 'without' as const, label: 'Without Gemini MCP' },
+    { id: 'with' as const, label: 'With Gemini MCP' },
+  ];
+
+  const claudeSubOptions = [
+    { id: 'without' as const, label: 'Without Gemini MCP' },
+    { id: 'skill' as const, label: 'With Claude Skill' },
+    { id: 'with' as const, label: 'With Gemini MCP' },
+  ];
+
+  const currentSubOptions = selectedIDE === 'codex' ? codexSubOptions : claudeSubOptions;
+  const currentSubValue = selectedIDE === 'codex' ? codexOption : claudeOption;
+  const setCurrentSubValue = selectedIDE === 'codex'
+    ? (v: string) => setCodexOption(v as 'without' | 'with')
+    : (v: string) => setClaudeOption(v as 'without' | 'skill' | 'with');
+
+  return (
+    <section className="py-16 px-6 bg-zinc-950">
+      <div className="max-w-4xl mx-auto">
+        {/* IDE Selector */}
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex p-1 rounded-lg bg-zinc-900/80 border border-zinc-800">
+            {ideOptions.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => setSelectedIDE(option.id)}
+                className={`px-4 py-2 text-xs font-medium rounded-md transition-all duration-200 ${
+                  selectedIDE === option.id
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sub-option Selector */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex p-1 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
+            {currentSubOptions.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => setCurrentSubValue(option.id)}
+                className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all duration-200 ${
+                  currentSubValue === option.id
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Video Container */}
+        <div className="relative group rounded-lg overflow-hidden aspect-video border border-zinc-800 bg-zinc-900/40 shadow-xl">
+          <video
+            key={getVideoSrc()}
+            src={getVideoSrc()}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          {/* Subtle overlay gradient */}
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-zinc-950/20 to-transparent" />
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const ToolMarquee = () => {
   const tools = ["Claude Code", "Cursor", "VS Code", "Windsurf", "Zed", "JetBrains AI", "Neovim", "Warp", "Gemini CLI", "Claude Desktop", "LM Studio", "Codex", "Copilot", "DeepSeek", "PyCharm", "and more..."];
 
@@ -344,36 +442,8 @@ export default function GeminiDesignMCP() {
       {/* Marquee Section */}
       <ToolMarquee />
 
-      {/* Video Placeholder Section */}
-      <section className="py-16 px-6 bg-zinc-950">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative group rounded-lg overflow-hidden aspect-video border border-zinc-800 bg-zinc-900/40 flex flex-col items-center justify-center gap-4 shadow-xl">
-            {/* Visual background details */}
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.15),transparent)]" />
-            <div className="absolute inset-0 border-[0.5px] border-zinc-700/50 m-12 pointer-events-none" />
-            <div className="absolute top-0 left-0 p-4 font-mono text-[10px] text-zinc-600">
-              $ gemini-design-mcp --monitor --visualize
-            </div>
-
-            <div className="relative z-10 w-16 h-16 rounded-full border border-zinc-700 flex items-center justify-center bg-zinc-900/80 backdrop-blur shadow-lg group-hover:scale-110 transition-transform duration-500 cursor-pointer">
-              <div className="w-10 h-10 rounded-full border border-zinc-500/50 flex items-center justify-center animate-pulse">
-                <Play className="w-5 h-5 text-zinc-100 fill-zinc-100 ml-0.5" />
-              </div>
-            </div>
-
-            <div className="text-center relative z-10">
-              <h3 className="text-base font-light text-zinc-300 tracking-tight">Technical Demo Coming Soon</h3>
-              <p className="text-zinc-600 text-xs mt-1 font-mono italic tracking-tighter">PREVIEW: Building a React Dashboard in 2.8 seconds</p>
-            </div>
-
-            <div className="absolute bottom-4 right-6 flex gap-3">
-              <div className="h-1.5 w-8 rounded-full bg-zinc-800" />
-              <div className="h-1.5 w-8 rounded-full bg-zinc-800" />
-              <div className="h-1.5 w-24 rounded-full bg-zinc-700" />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Video Demo Section */}
+      <VideoDemo />
 
       {/* Power Combo Synergy Section */}
       <section className="py-16 px-6 relative border-t border-zinc-900 overflow-hidden">

@@ -172,7 +172,7 @@ export default function UsagePage() {
                   }}
                   labelStyle={{ color: "#a1a1aa", marginBottom: "4px" }}
                   itemStyle={{ color: "#fafafa" }}
-                  formatter={(value: number) => [`${value.toLocaleString()} tokens`, "Usage"]}
+                  formatter={(value) => [`${(value ?? 0).toLocaleString()} tokens`, "Usage"]}
                 />
                 <Area
                   type="monotone"
