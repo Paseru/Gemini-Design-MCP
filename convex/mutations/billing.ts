@@ -6,9 +6,9 @@ import { calculateCost } from "../lib/constants";
 export const checkAndDeduct = internalMutation({
   args: {
     userId: v.id("users"),
-    outputTokens: v.number(),
+    totalTokens: v.number(), // input + output tokens
   },
-  handler: async (ctx, { userId, outputTokens }) => {
+  handler: async (ctx, { userId, totalTokens }) => {
     // 1. Check subscription quota first
     const subscription = await ctx.db
       .query("subscriptions")
@@ -18,10 +18,10 @@ export const checkAndDeduct = internalMutation({
     if (subscription && subscription.status === "active") {
       const remainingQuota = subscription.monthlyTokenQuota - subscription.tokensUsedThisPeriod;
 
-      if (remainingQuota >= outputTokens) {
+      if (remainingQuota >= totalTokens) {
         // Deduct from quota
         await ctx.db.patch(subscription._id, {
-          tokensUsedThisPeriod: subscription.tokensUsedThisPeriod + outputTokens,
+          tokensUsedThisPeriod: subscription.tokensUsedThisPeriod + totalTokens,
           updatedAt: Date.now(),
         });
         return { allowed: true, billedFrom: "quota" as const };
@@ -41,7 +41,7 @@ export const checkAndDeduct = internalMutation({
       return a.purchasedAt - b.purchasedAt;
     });
 
-    let tokensNeeded = outputTokens;
+    let tokensNeeded = totalTokens;
 
     for (const credit of credits) {
       if (tokensNeeded <= 0) break;
@@ -89,10 +89,46 @@ export const adjustTokens = internalMutation({
         });
       }
     } else {
-      // For credits, we need to handle both overage and refund
-      // This is more complex - for simplicity, we'll just log the difference
-      // In production, you'd want more sophisticated credit management
-      console.log(`Credit adjustment needed: ${difference} tokens for user ${userId}`);
+      // Adjust credits: negative difference = refund tokens back
+      const credits = await ctx.db
+        .query("credits")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .filter((q) => q.gt(q.field("remaining"), 0))
+        .collect();
+
+      // Sort by expiration (soonest first)
+      credits.sort((a, b) => {
+        if (a.expiresAt && b.expiresAt) return a.expiresAt - b.expiresAt;
+        return a.purchasedAt - b.purchasedAt;
+      });
+
+      if (difference < 0) {
+        // Refund: add tokens back to the first credit with remaining balance
+        // Or find the most recent credit purchase to add back to
+        const allCredits = await ctx.db
+          .query("credits")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .collect();
+
+        // Add refund to the most recent credit
+        const mostRecent = allCredits.sort((a, b) => b.purchasedAt - a.purchasedAt)[0];
+        if (mostRecent) {
+          await ctx.db.patch(mostRecent._id, {
+            remaining: mostRecent.remaining + Math.abs(difference),
+          });
+        }
+      } else {
+        // Additional charge: deduct more tokens
+        let tokensNeeded = difference;
+        for (const credit of credits) {
+          if (tokensNeeded <= 0) break;
+          const deduct = Math.min(credit.remaining, tokensNeeded);
+          await ctx.db.patch(credit._id, {
+            remaining: credit.remaining - deduct,
+          });
+          tokensNeeded -= deduct;
+        }
+      }
     }
   },
 });
@@ -110,6 +146,7 @@ export const logUsage = internalMutation({
     success: v.boolean(),
     errorMessage: v.optional(v.string()),
     requestId: v.string(),
+    latencyMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const costUsd = calculateCost(args.inputTokens, args.outputTokens);
@@ -127,6 +164,7 @@ export const logUsage = internalMutation({
       requestId: args.requestId,
       success: args.success,
       errorMessage: args.errorMessage,
+      latencyMs: args.latencyMs,
     });
   },
 });

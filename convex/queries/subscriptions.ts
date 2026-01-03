@@ -20,6 +20,7 @@ export const getCurrent = query({
       _id: subscription._id,
       tier: subscription.tier,
       status: subscription.status,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd ?? false,
       quota: subscription.monthlyTokenQuota,
       used: subscription.tokensUsedThisPeriod,
       remaining: Math.max(0, subscription.monthlyTokenQuota - subscription.tokensUsedThisPeriod),

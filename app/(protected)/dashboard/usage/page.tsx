@@ -1,13 +1,36 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Activity, Zap, TrendingUp, Clock } from "lucide-react";
+import { Activity, Zap, TrendingUp, Clock, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+
+const PAGE_SIZE = 10;
 
 export default function UsagePage() {
+  const [currentPage, setCurrentPage] = useState(0);
+
   const stats = useQuery(api.queries.usage.getStats);
-  const history = useQuery(api.queries.usage.getHistory, { limit: 50 });
+  const paginatedHistory = useQuery(api.queries.usage.getHistoryPaginated, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  });
   const dailyUsage = useQuery(api.queries.usage.getDailyUsage, { days: 30 });
+
+  // Keep previous data while loading new page
+  const lastValidData = useRef(paginatedHistory);
+  useEffect(() => {
+    if (paginatedHistory !== undefined) {
+      lastValidData.current = paginatedHistory;
+    }
+  }, [paginatedHistory]);
+
+  const displayData = paginatedHistory ?? lastValidData.current;
+  const isLoading = paginatedHistory === undefined;
+  const isFirstLoad = isLoading && !lastValidData.current;
+  const totalPages = displayData?.totalPages ?? 0;
+  const totalCount = displayData?.totalCount ?? 0;
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -92,13 +115,15 @@ export default function UsagePage() {
               <Clock size={16} strokeWidth={1.5} />
             </div>
             <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
-              Est. Cost
+              Avg Latency
             </span>
           </div>
           <p className="text-xl font-extralight text-zinc-100">
-            ${(stats?.last30Days?.totalCost ?? 0).toFixed(2)}
+            {stats?.last30Days?.avgLatencyMs
+              ? `${(stats.last30Days.avgLatencyMs / 1000).toFixed(1)}s`
+              : "—"}
           </p>
-          <p className="text-[11px] text-zinc-500 mt-2 font-light">Your savings this month</p>
+          <p className="text-[11px] text-zinc-500 mt-2 font-light">Response time (30 days)</p>
         </div>
       </div>
 
@@ -107,30 +132,62 @@ export default function UsagePage() {
         <h2 className="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mb-5">
           Daily Token Usage (Last 30 Days)
         </h2>
-        <div className="flex items-end gap-1 h-32">
+        <div className="h-72">
           {dailyUsage && dailyUsage.length > 0 ? (
-            dailyUsage.map((day, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-zinc-800 hover:bg-zinc-100 transition-colors cursor-crosshair group relative rounded-t"
-                style={{ height: `${(day.tokens / maxTokens) * 100}%`, minHeight: "4px" }}
-                title={`${day.date}: ${day.tokens.toLocaleString()} tokens`}
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={dailyUsage.map(d => ({
+                  ...d,
+                  dateLabel: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                }))}
+                margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
               >
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-zinc-100 text-zinc-950 px-3 py-1.5 text-[10px] whitespace-nowrap z-10 rounded">
-                  {day.tokens.toLocaleString()} tokens
-                  <div className="w-2 h-2 bg-zinc-100 rotate-45 mx-auto -mb-1 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
-                </div>
-              </div>
-            ))
+                <defs>
+                  <linearGradient id="tokenGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a1a1aa" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#a1a1aa" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                <XAxis
+                  dataKey="dateLabel"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#71717a", fontSize: 10 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#71717a", fontSize: 10 }}
+                  tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+                  width={40}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#18181b",
+                    border: "1px solid #27272a",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                  labelStyle={{ color: "#a1a1aa", marginBottom: "4px" }}
+                  itemStyle={{ color: "#fafafa" }}
+                  formatter={(value: number) => [`${value.toLocaleString()} tokens`, "Usage"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="tokens"
+                  stroke="#a1a1aa"
+                  strokeWidth={2}
+                  fill="url(#tokenGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-zinc-500 text-xs font-light">
+            <div className="h-full flex items-center justify-center text-zinc-500 text-xs font-light">
               No usage data yet
             </div>
           )}
-        </div>
-        <div className="flex justify-between mt-4 text-[10px] text-zinc-500 uppercase tracking-widest">
-          <span>30 days ago</span>
-          <span>Today</span>
         </div>
       </section>
 
@@ -142,7 +199,14 @@ export default function UsagePage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative">
+          {/* Loading overlay */}
+          {isLoading && !isFirstLoad && (
+            <div className="absolute inset-0 bg-zinc-950/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
+              <Loader2 className="w-5 h-5 animate-spin text-zinc-400" />
+            </div>
+          )}
+
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-950/30">
@@ -162,18 +226,21 @@ export default function UsagePage() {
                   Billed From
                 </th>
                 <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
-                  Cost
-                </th>
-                <th className="px-4 py-2.5 text-[10px] uppercase tracking-widest font-medium text-zinc-500 text-right">
                   Status
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {history?.logs && history.logs.length > 0 ? (
-                history.logs.map((log, idx) => (
+              {isFirstLoad ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-zinc-500 mx-auto" />
+                  </td>
+                </tr>
+              ) : displayData?.logs && displayData.logs.length > 0 ? (
+                displayData.logs.map((log) => (
                   <tr
-                    key={idx}
+                    key={log._id}
                     className="hover:bg-zinc-800/50 transition-colors"
                   >
                     <td className="px-4 py-3 text-xs text-zinc-500 font-light">
@@ -199,9 +266,6 @@ export default function UsagePage() {
                         {log.billedFrom}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-100 text-right font-medium">
-                      ${log.costUsd.toFixed(4)}
-                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div
@@ -222,7 +286,7 @@ export default function UsagePage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-zinc-500 text-xs font-light">
+                  <td colSpan={6} className="px-4 py-10 text-center text-zinc-500 text-xs font-light">
                     No requests yet
                   </td>
                 </tr>
@@ -230,6 +294,94 @@ export default function UsagePage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 0 && (
+          <div className="h-14 border-t border-zinc-800 flex items-center justify-between px-4 bg-zinc-950/50">
+            <div className="text-[11px] text-zinc-500 font-light">
+              Showing{" "}
+              <span className="text-zinc-300 font-medium">
+                {currentPage * PAGE_SIZE + 1}-{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)}
+              </span>{" "}
+              of <span className="text-zinc-300 font-medium">{totalCount}</span> results
+            </div>
+
+            <div className="flex items-center gap-1">
+              {/* Previous Button */}
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                disabled={currentPage === 0 || isLoading}
+                className={`
+                  p-2 rounded transition-all duration-200
+                  ${currentPage === 0 || isLoading
+                    ? "text-zinc-600 cursor-not-allowed"
+                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                  }
+                `}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage =
+                    pageNum === 0 ||
+                    pageNum === totalPages - 1 ||
+                    Math.abs(pageNum - currentPage) <= 1;
+
+                  // Show ellipsis
+                  const showEllipsisBefore = pageNum === currentPage - 2 && currentPage > 2;
+                  const showEllipsisAfter = pageNum === currentPage + 2 && currentPage < totalPages - 3;
+
+                  if (showEllipsisBefore || showEllipsisAfter) {
+                    return (
+                      <span key={pageNum} className="px-1 text-zinc-600 text-xs">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      disabled={isLoading}
+                      className={`
+                        min-w-[32px] h-8 px-2 text-xs font-medium rounded transition-all duration-200
+                        ${pageNum === currentPage
+                          ? "bg-zinc-100 text-zinc-950"
+                          : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                        }
+                        ${isLoading ? "opacity-50 cursor-not-allowed" : ""}
+                      `}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={currentPage >= totalPages - 1 || isLoading}
+                className={`
+                  p-2 rounded transition-all duration-200
+                  ${currentPage >= totalPages - 1 || isLoading
+                    ? "text-zinc-600 cursor-not-allowed"
+                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                  }
+                `}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

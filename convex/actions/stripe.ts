@@ -7,12 +7,14 @@ import { auth } from "../auth";
 import Stripe from "stripe";
 import { PRICING_TIERS, CREDIT_PACKAGES } from "../lib/constants";
 import { Id } from "../_generated/dataModel";
-
-const getStripe = (): Stripe => {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
-  return new Stripe(key);
-};
+import {
+  getStripe,
+  getSubscriptionPriceId,
+  getCreditsPriceId,
+  getWebhookSecret,
+  getAppUrl,
+  getStripeMode,
+} from "../lib/stripe";
 
 // Create checkout session for subscription
 export const createCheckoutSession = action({
@@ -42,18 +44,15 @@ export const createCheckoutSession = action({
       });
     }
 
-    const priceId = tier === "pro"
-      ? process.env.STRIPE_PRO_PRICE_ID
-      : process.env.STRIPE_ENTERPRISE_PRICE_ID;
-
-    if (!priceId) throw new Error(`Price ID not configured for ${tier}`);
+    const priceId = getSubscriptionPriceId(tier);
+    const appUrl = getAppUrl();
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?checkout=canceled`,
+      success_url: `${appUrl}/dashboard?checkout=success`,
+      cancel_url: `${appUrl}/settings/billing?checkout=canceled`,
       metadata: { convexUserId: userId, tier },
     });
 
@@ -91,15 +90,15 @@ export const purchaseCredits = action({
       });
     }
 
-    const priceId = process.env[`STRIPE_CREDITS_${pkg.toUpperCase()}_PRICE_ID`];
-    if (!priceId) throw new Error(`Price ID not configured for ${pkg} credits`);
+    const priceId = getCreditsPriceId(pkg);
+    const appUrl = getAppUrl();
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?credits=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?credits=canceled`,
+      success_url: `${appUrl}/dashboard?credits=success`,
+      cancel_url: `${appUrl}/dashboard?credits=canceled`,
       metadata: {
         convexUserId: userId,
         type: "credits",
@@ -126,26 +125,22 @@ export const createPortalSession = action({
       throw new Error("No billing account found");
     }
 
+    const appUrl = getAppUrl();
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripeCustomerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing`,
+      return_url: `${appUrl}/settings/billing`,
     });
 
     return session.url;
   },
 });
 
-// Handle Stripe webhooks
+// Handle Stripe webhooks (called by Convex HTTP route /stripe/webhook)
 export const handleWebhook = internalAction({
   args: { signature: v.string(), payload: v.string() },
   handler: async (ctx, { signature, payload }): Promise<{ success: boolean }> => {
     const stripe = getStripe();
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    if (!webhookSecret) {
-      console.error("STRIPE_WEBHOOK_SECRET not configured");
-      return { success: false };
-    }
+    const webhookSecret = getWebhookSecret();
 
     let event: Stripe.Event;
     try {
@@ -218,6 +213,7 @@ async function handleCheckoutComplete(ctx: ActionCtx, session: Stripe.Checkout.S
         tier,
         status: "active",
         monthlyTokenQuota: tierConfig.monthlyTokenQuota,
+        resetUsage: true, // Reset quota on upgrade/change
       });
     } else {
       await ctx.runMutation(internal.mutations.subscriptions.create, {
@@ -261,6 +257,7 @@ async function handleSubscriptionChange(
   await ctx.runMutation(internal.mutations.subscriptions.updateStatus, {
     subscriptionId: sub._id,
     status: canceled ? "canceled" : status,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
   });
 
   if (canceled) {
@@ -287,3 +284,94 @@ async function handleInvoicePaid(ctx: ActionCtx, invoice: Stripe.Invoice) {
     });
   }
 }
+
+// Setup Stripe products and prices (run once to initialize)
+export const setupStripeProducts = action({
+  args: {},
+  handler: async (): Promise<{
+    products: Record<string, string>;
+    prices: Record<string, string>;
+  }> => {
+    const stripe = getStripe();
+    const products: Record<string, string> = {};
+    const prices: Record<string, string> = {};
+
+    // Create Pro Subscription product
+    const proProduct = await stripe.products.create({
+      name: "Pro Subscription",
+      description: "1M tokens/month (~660 generations). Perfect for individual developers.",
+    });
+    products.pro = proProduct.id;
+
+    const proPrice = await stripe.prices.create({
+      product: proProduct.id,
+      unit_amount: 1900, // $19
+      currency: "usd",
+      recurring: { interval: "month" },
+    });
+    prices.STRIPE_PRO_PRICE_ID = proPrice.id;
+
+    // Create Enterprise Subscription product
+    const enterpriseProduct = await stripe.products.create({
+      name: "Enterprise Subscription",
+      description: "6M tokens/month (~4000 generations). For teams and high-volume usage.",
+    });
+    products.enterprise = enterpriseProduct.id;
+
+    const enterprisePrice = await stripe.prices.create({
+      product: enterpriseProduct.id,
+      unit_amount: 7900, // $79
+      currency: "usd",
+      recurring: { interval: "month" },
+    });
+    prices.STRIPE_ENTERPRISE_PRICE_ID = enterprisePrice.id;
+
+    // Create Starter Credits product
+    const starterProduct = await stripe.products.create({
+      name: "Starter Credits",
+      description: "50,000 tokens one-time purchase.",
+    });
+    products.starter = starterProduct.id;
+
+    const starterPrice = await stripe.prices.create({
+      product: starterProduct.id,
+      unit_amount: 500, // $5
+      currency: "usd",
+    });
+    prices.STRIPE_CREDITS_STARTER_PRICE_ID = starterPrice.id;
+
+    // Create Standard Credits product
+    const standardProduct = await stripe.products.create({
+      name: "Standard Credits",
+      description: "250,000 tokens one-time purchase.",
+    });
+    products.standard = standardProduct.id;
+
+    const standardPrice = await stripe.prices.create({
+      product: standardProduct.id,
+      unit_amount: 2000, // $20
+      currency: "usd",
+    });
+    prices.STRIPE_CREDITS_STANDARD_PRICE_ID = standardPrice.id;
+
+    // Create Bulk Credits product
+    const bulkProduct = await stripe.products.create({
+      name: "Bulk Credits",
+      description: "750,000 tokens one-time purchase.",
+    });
+    products.bulk = bulkProduct.id;
+
+    const bulkPrice = await stripe.prices.create({
+      product: bulkProduct.id,
+      unit_amount: 5000, // $50
+      currency: "usd",
+    });
+    prices.STRIPE_CREDITS_BULK_PRICE_ID = bulkPrice.id;
+
+    console.log("=== STRIPE SETUP COMPLETE ===");
+    console.log("Add these to your Convex environment variables:");
+    console.log(JSON.stringify(prices, null, 2));
+
+    return { products, prices };
+  },
+})

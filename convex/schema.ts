@@ -45,6 +45,7 @@ export default defineSchema({
       v.literal("enterprise")
     ),
     status: v.string(), // "active", "canceled", "past_due", etc.
+    cancelAtPeriodEnd: v.optional(v.boolean()), // true if user canceled but still active until period end
     currentPeriodStart: v.number(),
     currentPeriodEnd: v.number(),
     monthlyTokenQuota: v.number(), // output tokens allowed per month
@@ -79,6 +80,7 @@ export default defineSchema({
     requestId: v.string(), // for debugging
     success: v.boolean(),
     errorMessage: v.optional(v.string()),
+    latencyMs: v.optional(v.number()), // response time in milliseconds
   })
     .index("by_userId", ["userId"])
     .index("by_apiKeyId", ["apiKeyId"])

@@ -2,19 +2,19 @@
 export const PRICING_TIERS = {
   free: {
     name: "Free",
-    monthlyTokenQuota: 30_000, // ~20 generations
+    monthlyTokenQuota: 10_000, // ~6-7 generations
     priceUsd: 0,
     stripePriceId: null,
   },
   pro: {
     name: "Pro",
-    monthlyTokenQuota: 500_000, // ~330 generations
+    monthlyTokenQuota: 1_000_000, // ~660 generations
     priceUsd: 19,
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID,
   },
   enterprise: {
     name: "Enterprise",
-    monthlyTokenQuota: 3_000_000, // ~2000 generations
+    monthlyTokenQuota: 6_000_000, // ~4000 generations
     priceUsd: 79,
     stripePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID,
   },

@@ -17,11 +17,30 @@ import {
   Server,
   Search,
   RefreshCw,
+  FileText,
 } from "lucide-react";
+
+// Instructions to copy for CLAUDE.md/AGENTS.md
+const CLAUDE_MD_INSTRUCTIONS = `# MCP Gemini Design
+
+**Gemini is your frontend developer.** For all UI/design work, use this MCP. Tool descriptions contain all necessary instructions.
+
+## Before writing any UI code, ask yourself:
+
+- Is it a NEW visual component (popup, card, section, etc.)? → \`snippet_frontend\` or \`create_frontend\`
+- Is it a REDESIGN of an existing element? → \`modify_frontend\`
+- Is it just text/logic, or a trivial change? → Do it yourself
+
+## Critical rules:
+
+1. **If UI already exists and you need to redesign/restyle it** → use \`modify_frontend\`, NOT snippet_frontend.
+
+3. **Tasks can be mixed** (logic + UI). Mentally separate them. Do the logic yourself, delegate the UI to Gemini.`;
 
 // Tool configurations
 const TOOLS = [
   { id: "claude-code", name: "Claude Code", category: "CLI", hasLocal: true },
+  { id: "codex", name: "Codex", category: "CLI", hasLocal: true },
   { id: "cursor", name: "Cursor", category: "IDE", hasLocal: true },
   { id: "vscode", name: "VS Code", category: "IDE", hasLocal: true },
   { id: "windsurf", name: "Windsurf", category: "IDE", hasLocal: true },
@@ -40,6 +59,10 @@ function getConfiguration(toolId: string, apiKey: string): { code: string; langu
   const configs: Record<string, { code: string; language: string }> = {
     "claude-code": {
       code: `claude mcp add gemini-design-mcp --env API_KEY=${key} -- npx -y gemini-design-mcp@latest`,
+      language: "bash",
+    },
+    codex: {
+      code: `codex mcp add gemini-design-mcp --env API_KEY=${key} -- npx -y gemini-design-mcp@latest`,
       language: "bash",
     },
     cursor: {
@@ -179,6 +202,7 @@ export default function ApiKeysPage() {
 
   const [selectedTool, setSelectedTool] = useState(TOOLS[0]);
   const [configCopied, setConfigCopied] = useState(false);
+  const [instructionsCopied, setInstructionsCopied] = useState(false);
   const [showToolDropdown, setShowToolDropdown] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [toolSearch, setToolSearch] = useState("");
@@ -429,7 +453,7 @@ export default function ApiKeysPage() {
       </section>
 
       {/* Installation Instructions */}
-      <section className="bg-zinc-900/50 border border-zinc-800 rounded overflow-hidden">
+      <section className="bg-zinc-900/50 border border-zinc-800 rounded">
         <div className="h-10 border-b border-zinc-800 flex items-center justify-between px-5 bg-zinc-950/50">
           <div className="flex items-center gap-3">
             <Terminal className="w-3.5 h-3.5 text-zinc-500" />
@@ -596,6 +620,72 @@ export default function ApiKeysPage() {
               </p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* CLAUDE.md / AGENTS.md Instructions */}
+      <section className="bg-zinc-900/50 border border-zinc-800 rounded">
+        <div className="h-10 border-b border-zinc-800 flex items-center px-5 bg-zinc-950/50">
+          <div className="flex items-center gap-3">
+            <FileText className="w-3.5 h-3.5 text-zinc-500" />
+            <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-zinc-500">
+              Agent Instructions
+            </span>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <p className="text-zinc-400 text-[11px] leading-relaxed mb-3">
+              Add these instructions to your project&apos;s <code className="px-1 py-0.5 bg-zinc-900 text-zinc-300 rounded text-[10px]">CLAUDE.md</code> or <code className="px-1 py-0.5 bg-zinc-900 text-zinc-300 rounded text-[10px]">AGENTS.md</code> file to help your AI agent use the MCP effectively.
+            </p>
+            <div className="relative">
+              <div className="p-4 bg-zinc-950 border border-zinc-900 overflow-x-auto rounded text-[11px] text-zinc-300 space-y-3">
+                {/* Title */}
+                <h1 className="text-sm font-bold text-zinc-100"># MCP Gemini Design</h1>
+
+                {/* Intro */}
+                <p>
+                  <strong className="text-zinc-100">Gemini is your frontend developer.</strong> For all UI/design work, use this MCP. Tool descriptions contain all necessary instructions.
+                </p>
+
+                {/* Section: Before writing */}
+                <h2 className="text-xs font-bold text-zinc-100 pt-2">## Before writing any UI code, ask yourself:</h2>
+                <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                  <li>Is it a NEW visual component (popup, card, section, etc.)? → <code className="px-1 py-0.5 bg-zinc-800 text-zinc-300 rounded text-[10px]">snippet_frontend</code> or <code className="px-1 py-0.5 bg-zinc-800 text-zinc-300 rounded text-[10px]">create_frontend</code></li>
+                  <li>Is it a REDESIGN of an existing element? → <code className="px-1 py-0.5 bg-zinc-800 text-zinc-300 rounded text-[10px]">modify_frontend</code></li>
+                  <li>Is it just text/logic, or a trivial change? → Do it yourself</li>
+                </ul>
+
+                {/* Section: Critical rules */}
+                <h2 className="text-xs font-bold text-zinc-100 pt-2">## Critical rules:</h2>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-400">
+                  <li><strong className="text-zinc-200">If UI already exists and you need to redesign/restyle it</strong> → use <code className="px-1 py-0.5 bg-zinc-800 text-zinc-300 rounded text-[10px]">modify_frontend</code>, NOT snippet_frontend.</li>
+                  <li className="mt-1"><strong className="text-zinc-200">Tasks can be mixed</strong> (logic + UI). Mentally separate them. Do the logic yourself, delegate the UI to Gemini.</li>
+                </ol>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(CLAUDE_MD_INSTRUCTIONS);
+                  setInstructionsCopied(true);
+                  setTimeout(() => setInstructionsCopied(false), 2000);
+                }}
+                className="absolute top-2 right-2 h-7 px-2.5 flex items-center gap-2 text-[9px] bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-colors uppercase tracking-widest rounded text-zinc-500 hover:text-zinc-200"
+              >
+                {instructionsCopied ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </div>

@@ -13,6 +13,7 @@ import type * as actions_stripe from "../actions/stripe.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as lib_constants from "../lib/constants.js";
+import type * as lib_stripe from "../lib/stripe.js";
 import type * as mutations_apiKeys from "../mutations/apiKeys.js";
 import type * as mutations_billing from "../mutations/billing.js";
 import type * as mutations_credits from "../mutations/credits.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
   "lib/constants": typeof lib_constants;
+  "lib/stripe": typeof lib_stripe;
   "mutations/apiKeys": typeof mutations_apiKeys;
   "mutations/billing": typeof mutations_billing;
   "mutations/credits": typeof mutations_credits;

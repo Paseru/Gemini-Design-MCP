@@ -1,6 +1,7 @@
 import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { auth } from "../auth";
+import { PRICING_TIERS } from "../lib/constants";
 
 // Create user profile after first login
 export const createProfile = mutation({
@@ -35,7 +36,7 @@ export const createProfile = mutation({
       status: "active",
       currentPeriodStart: now,
       currentPeriodEnd: now + 30 * 24 * 60 * 60 * 1000, // 30 days
-      monthlyTokenQuota: 30_000,
+      monthlyTokenQuota: PRICING_TIERS.free.monthlyTokenQuota,
       tokensUsedThisPeriod: 0,
       createdAt: now,
       updatedAt: now,

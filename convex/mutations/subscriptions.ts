@@ -38,16 +38,27 @@ export const update = internalMutation({
     tier: v.union(v.literal("free"), v.literal("pro"), v.literal("enterprise")),
     status: v.string(),
     monthlyTokenQuota: v.number(),
+    resetUsage: v.optional(v.boolean()), // Reset tokens on upgrade
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.subscriptionId, {
+    const now = Date.now();
+    const updates: Record<string, any> = {
       stripeSubscriptionId: args.stripeSubscriptionId,
       stripePriceId: args.stripePriceId,
       tier: args.tier,
       status: args.status,
       monthlyTokenQuota: args.monthlyTokenQuota,
-      updatedAt: Date.now(),
-    });
+      updatedAt: now,
+    };
+
+    // Reset usage when upgrading to a new plan
+    if (args.resetUsage) {
+      updates.tokensUsedThisPeriod = 0;
+      updates.currentPeriodStart = now;
+      updates.currentPeriodEnd = now + 30 * 24 * 60 * 60 * 1000; // 30 days
+    }
+
+    await ctx.db.patch(args.subscriptionId, updates);
   },
 });
 
@@ -56,10 +67,12 @@ export const updateStatus = internalMutation({
   args: {
     subscriptionId: v.id("subscriptions"),
     status: v.string(),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
   },
-  handler: async (ctx, { subscriptionId, status }) => {
+  handler: async (ctx, { subscriptionId, status, cancelAtPeriodEnd }) => {
     await ctx.db.patch(subscriptionId, {
       status,
+      cancelAtPeriodEnd: cancelAtPeriodEnd ?? false,
       updatedAt: Date.now(),
     });
   },

@@ -249,7 +249,7 @@ const CLAUDE_MD_INSTRUCTIONS = `# MCP Gemini Design
 
 1. **If UI already exists and you need to redesign/restyle it** → use \`modify_frontend\`, NOT snippet_frontend.
 
-2. **Tasks can be mixed** (logic + UI). Mentally separate them. Do the logic yourself, delegate the UI to Gemini.`;
+3. **Tasks can be mixed** (logic + UI). Mentally separate them. Do the logic yourself, delegate the UI to Gemini.`;
 
 export default function GeminiDesignMCP() {
   const [selectedTool, setSelectedTool] = useState(TOOLS[0]);
@@ -393,7 +393,7 @@ export default function GeminiDesignMCP() {
                 </div>
                 <div>
                   <h4 className="text-zinc-100 font-medium text-sm mb-0.5">Architectural Logic</h4>
-                  <p className="text-xs text-zinc-500 leading-relaxed">Utilize Claude or OpenAI to define your core backend architecture and complex business logic.</p>
+                  <p className="text-xs text-zinc-500 leading-relaxed">Utilize Claude or GPT-4o to define your core backend architecture and complex business logic.</p>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -711,24 +711,24 @@ export default function GeminiDesignMCP() {
                 tier: "Starter",
                 price: "Free",
                 desc: "Perfect for experimenting with the MCP protocol.",
-                features: ["10K tokens / month", "~7 UI generations", "All MCP tools included", "Discord community"],
+                features: ["30K Tokens / month", "Standard Latency", "Community Support", "Any IDE support"],
                 cta: "Get Started",
                 highlight: false
               },
               {
                 tier: "Professional",
                 price: "$19",
-                desc: "For developers shipping UI daily.",
-                features: ["1M tokens / month", "~660 UI generations", "All MCP tools included", "Discord community"],
+                desc: "For engineers who demand precision and speed daily.",
+                features: ["500K Tokens / month", "Priority Queue", "Full app scaffolding", "Email Support"],
                 cta: "Go Pro",
                 highlight: true
               },
               {
                 tier: "Enterprise",
                 price: "$79",
-                desc: "For teams and high-volume usage.",
-                features: ["6M tokens / month", "~4,000 UI generations", "All MCP tools included", "Discord community"],
-                cta: "Go Enterprise",
+                desc: "Custom tooling for teams requiring governance and scale.",
+                features: ["3M Tokens / month", "Ultra-low latency", "Team token pooling", "24/7 Priority Support"],
+                cta: "Contact Sales",
                 highlight: false
               }
             ].map((plan, i) => (
@@ -798,16 +798,13 @@ export default function GeminiDesignMCP() {
                 Premium frontend design for every AI agent and IDE.
               </p>
               <div className="flex gap-4">
-                <a href="/docs" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
+                <a href="#" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
                   Documentation
                 </a>
-                <a href="https://x.com/RayaneRachid_" target="_blank" rel="noopener noreferrer" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
+                <a href="#" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
                   Twitter
                 </a>
-                <a href="https://www.linkedin.com/in/rayane-rachid-a47514275/" target="_blank" rel="noopener noreferrer" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
-                  LinkedIn
-                </a>
-                <a href="https://discord.gg/YHrctEUTxW" target="_blank" rel="noopener noreferrer" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
+                <a href="#" className="text-[9px] uppercase tracking-widest font-bold text-zinc-600 hover:text-zinc-100 transition-colors">
                   Discord
                 </a>
               </div>
@@ -817,7 +814,7 @@ export default function GeminiDesignMCP() {
               <ul className="space-y-2 text-[10px] text-zinc-500">
                 <li><a href="#features" className="hover:text-zinc-100 transition-colors">Features</a></li>
                 <li><a href="#pricing" className="hover:text-zinc-100 transition-colors">Pricing</a></li>
-                <li><a href="/docs" className="hover:text-zinc-100 transition-colors">Docs</a></li>
+                <li><a href="#docs" className="hover:text-zinc-100 transition-colors">Docs</a></li>
               </ul>
             </div>
             <div>

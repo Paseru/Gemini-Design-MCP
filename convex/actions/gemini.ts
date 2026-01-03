@@ -4,8 +4,33 @@ import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import crypto from "crypto";
+import { GoogleGenAI } from "@google/genai";
 
-// Main proxy function: validates API key, checks quota, forwards to Gemini
+// Vertex AI Configuration
+// Credentials are stored in environment variables for security
+function getVertexAIClient() {
+  const clientEmail = process.env.VERTEX_CLIENT_EMAIL;
+  const privateKey = process.env.VERTEX_PRIVATE_KEY;
+  const project = process.env.VERTEX_PROJECT || "gemini-3-pro-481223";
+
+  if (!clientEmail || !privateKey) {
+    throw new Error("Missing Vertex AI credentials in environment variables");
+  }
+
+  return new GoogleGenAI({
+    vertexai: true,
+    project,
+    location: "global",
+    googleAuthOptions: {
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey.replace(/\\n/g, "\n"),
+      },
+    },
+  });
+}
+
+// Main proxy function: validates API key, checks quota, forwards to Gemini via Vertex AI
 export const validateAndProxy = internalAction({
   args: {
     apiKey: v.string(),
@@ -39,13 +64,13 @@ export const validateAndProxy = internalAction({
     });
 
     // 2. Estimate tokens (conservative estimate for pre-check)
-    // Average generation is ~1500 output tokens
-    const estimatedOutputTokens = 2000;
+    // We estimate both input and output tokens
+    const estimatedTotalTokens = 3000; // ~1000 input + ~2000 output
 
     // 3. Check quota/credits
     const billing = await ctx.runMutation(internal.mutations.billing.checkAndDeduct, {
       userId: apiKeyDoc.userId,
-      outputTokens: estimatedOutputTokens,
+      totalTokens: estimatedTotalTokens,
     });
 
     if (!billing.allowed) {
@@ -56,13 +81,14 @@ export const validateAndProxy = internalAction({
       };
     }
 
-    // 4. Call Gemini API
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-      // Refund the deducted tokens since we can't process the request
+    // 4. Call Gemini via Vertex AI
+    let ai: GoogleGenAI;
+    try {
+      ai = getVertexAIClient();
+    } catch (error) {
       await ctx.runMutation(internal.mutations.billing.adjustTokens, {
         userId: apiKeyDoc.userId,
-        estimated: estimatedOutputTokens,
+        estimated: estimatedTotalTokens,
         actual: 0,
         billedFrom: billing.billedFrom,
       });
@@ -74,38 +100,40 @@ export const validateAndProxy = internalAction({
     }
 
     try {
-      // Extract model from body, default to gemini-3-flash-preview
       const model = body.model || "gemini-3-flash-preview";
 
-      // Remove model from body before sending to Gemini (it goes in the URL)
-      const { model: _, ...geminiBody } = body;
+      // Build the request for Vertex AI SDK
+      const userPrompt = body.contents?.[0]?.parts?.[0]?.text || "";
+      const systemPrompt = body.systemInstruction?.parts?.[0]?.text || "";
 
-      const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(geminiBody),
-        }
-      );
+      // Measure latency
+      const startTime = Date.now();
+      const response = await ai.models.generateContent({
+        model,
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: body.generationConfig?.temperature ?? 1,
+        },
+      });
+      const latencyMs = Date.now() - startTime;
 
-      const result = await geminiResponse.json();
+      // Get token counts from response
+      const actualInputTokens = response.usageMetadata?.promptTokenCount || 0;
+      const actualOutputTokens = response.usageMetadata?.candidatesTokenCount || 0;
+      const actualTotalTokens = actualInputTokens + actualOutputTokens;
 
-      // 5. Get actual token counts
-      const actualInputTokens = result.usageMetadata?.promptTokenCount || 0;
-      const actualOutputTokens = result.usageMetadata?.candidatesTokenCount || 0;
-
-      // 6. Adjust token deduction if estimate was wrong
-      if (actualOutputTokens !== estimatedOutputTokens) {
+      // Adjust token deduction if estimate was wrong
+      if (actualTotalTokens !== estimatedTotalTokens) {
         await ctx.runMutation(internal.mutations.billing.adjustTokens, {
           userId: apiKeyDoc.userId,
-          estimated: estimatedOutputTokens,
-          actual: actualOutputTokens,
+          estimated: estimatedTotalTokens,
+          actual: actualTotalTokens,
           billedFrom: billing.billedFrom,
         });
       }
 
-      // 7. Log usage
+      // Log usage
       const endpoint = body.endpoint || "generate";
       await ctx.runMutation(internal.mutations.billing.logUsage, {
         userId: apiKeyDoc.userId,
@@ -115,28 +143,38 @@ export const validateAndProxy = internalAction({
         model,
         endpoint,
         billedFrom: billing.billedFrom,
-        success: geminiResponse.ok,
-        errorMessage: geminiResponse.ok ? undefined : result.error?.message,
+        success: true,
         requestId,
+        latencyMs,
       });
 
-      if (!geminiResponse.ok) {
-        return {
-          success: false,
-          error: result.error?.message || "Gemini API error",
-          statusCode: geminiResponse.status,
-        };
-      }
+      // Return response in Gemini API format for compatibility
+      const result = {
+        candidates: [
+          {
+            content: {
+              parts: [{ text: response.text || "" }],
+              role: "model",
+            },
+          },
+        ],
+        usageMetadata: {
+          promptTokenCount: actualInputTokens,
+          candidatesTokenCount: actualOutputTokens,
+        },
+      };
 
       return { success: true, result };
     } catch (error) {
-      // Refund on network error
+      // Refund on error
       await ctx.runMutation(internal.mutations.billing.adjustTokens, {
         userId: apiKeyDoc.userId,
-        estimated: estimatedOutputTokens,
+        estimated: estimatedTotalTokens,
         actual: 0,
         billedFrom: billing.billedFrom,
       });
+
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
       // Log failed request
       const failedModel = body.model || "gemini-3-flash-preview";
@@ -149,13 +187,13 @@ export const validateAndProxy = internalAction({
         endpoint: body.endpoint || "generate",
         billedFrom: billing.billedFrom,
         success: false,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage,
         requestId,
       });
 
       return {
         success: false,
-        error: "Failed to connect to Gemini API",
+        error: errorMessage,
         statusCode: 503,
       };
     }

@@ -30,6 +30,12 @@ export const getStats = query({
     const totalRequests = logs.length;
     const successfulRequests = logs.filter((l) => l.success).length;
 
+    // Calculate average latency (only from logs that have latencyMs)
+    const logsWithLatency = logs.filter((l) => l.latencyMs !== undefined && l.latencyMs > 0);
+    const avgLatencyMs = logsWithLatency.length > 0
+      ? Math.round(logsWithLatency.reduce((sum, log) => sum + (log.latencyMs || 0), 0) / logsWithLatency.length)
+      : null;
+
     // Get credits remaining
     const credits = await ctx.db
       .query("credits")
@@ -56,16 +62,16 @@ export const getStats = query({
         totalCost,
         totalRequests,
         successfulRequests,
+        avgLatencyMs,
       },
     };
   },
 });
 
-// Get usage history (paginated)
+// Get usage history (paginated) - used by main dashboard for limited preview
 export const getHistory = query({
   args: {
     limit: v.optional(v.number()),
-    cursor: v.optional(v.string()),
   },
   handler: async (ctx, { limit = 50 }) => {
     const userId = await auth.getUserId(ctx);
@@ -91,8 +97,66 @@ export const getHistory = query({
         success: log.success,
         errorMessage: log.errorMessage,
         createdAt: log.createdAt,
+        latencyMs: log.latencyMs,
       })),
       hasMore,
+    };
+  },
+});
+
+// Get usage history with page-based pagination - used by /dashboard/usage
+export const getHistoryPaginated = query({
+  args: {
+    page: v.number(), // 0-indexed
+    pageSize: v.number(),
+  },
+  handler: async (ctx, { page, pageSize }) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return {
+        logs: [],
+        totalCount: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      };
+    }
+
+    // Get total count for pagination info
+    const allLogs = await ctx.db
+      .query("usageLogs")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const totalCount = allLogs.length;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    // Get paginated results
+    const offset = page * pageSize;
+    const logs = await ctx.db
+      .query("usageLogs")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(offset + pageSize);
+
+    const paginatedLogs = logs.slice(offset, offset + pageSize);
+
+    return {
+      logs: paginatedLogs.map((log) => ({
+        _id: log._id,
+        endpoint: log.endpoint,
+        inputTokens: log.inputTokens,
+        outputTokens: log.outputTokens,
+        costUsd: log.costUsd,
+        billedFrom: log.billedFrom,
+        success: log.success,
+        errorMessage: log.errorMessage,
+        createdAt: log.createdAt,
+      })),
+      totalCount,
+      page,
+      pageSize,
+      totalPages,
     };
   },
 });

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ArrowUpRight,
   Zap,
+  AlertCircle,
 } from "lucide-react";
 
 const PLANS = [
@@ -16,22 +17,22 @@ const PLANS = [
     name: "Starter",
     price: 0,
     desc: "Perfect for experimenting with the MCP protocol.",
-    features: ["30K Tokens / month", "Standard Latency", "Community Support", "Any IDE support"],
+    features: ["10K tokens / month", "~7 UI generations", "All MCP tools included", "Discord community"],
   },
   {
     id: "pro",
     name: "Professional",
     price: 19,
-    desc: "For engineers who demand precision and speed daily.",
-    features: ["500K Tokens / month", "Priority Queue", "Full app scaffolding", "Email Support"],
+    desc: "For developers shipping UI daily.",
+    features: ["1M tokens / month", "~660 UI generations", "All MCP tools included", "Discord community"],
     popular: true,
   },
   {
     id: "enterprise",
     name: "Enterprise",
     price: 79,
-    desc: "Custom tooling for teams requiring governance and scale.",
-    features: ["3M Tokens / month", "Ultra-low latency", "Team token pooling", "24/7 Priority Support"],
+    desc: "For teams and high-volume usage.",
+    features: ["6M tokens / month", "~4,000 UI generations", "All MCP tools included", "Discord community"],
   },
 ];
 
@@ -53,8 +54,16 @@ export default function BillingPage() {
   const handleUpgrade = async (tier: "pro" | "enterprise") => {
     setLoading(tier);
     try {
-      const url = await createCheckout({ tier });
-      if (url) window.location.href = url;
+      // If user already has an active subscription, redirect to portal
+      // Stripe portal handles plan changes, pro-rata, etc.
+      if (subscription && subscription.tier !== "free") {
+        const url = await createPortal();
+        if (url) window.location.href = url;
+      } else {
+        // New subscription - create checkout session
+        const url = await createCheckout({ tier });
+        if (url) window.location.href = url;
+      }
     } catch (error) {
       console.error("Checkout error:", error);
     } finally {
@@ -111,6 +120,31 @@ export default function BillingPage() {
           </button>
         )}
       </header>
+
+      {/* Cancellation Notice */}
+      {subscription?.cancelAtPeriodEnd && (
+        <div className="bg-amber-950/30 border border-amber-800/50 p-4 rounded-lg flex items-start gap-3">
+          <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-amber-200 font-medium mb-1">
+              Your subscription has been canceled
+            </p>
+            <p className="text-xs text-amber-400/80 font-light">
+              You will not be charged next month. Your plan remains active until{" "}
+              <span className="font-medium text-amber-300">
+                {subscription.periodEnd
+                  ? new Date(subscription.periodEnd).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "the end of your billing period"}
+              </span>
+              . After that, you'll be downgraded to the free plan.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Current Plan */}
       <section className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-lg">
@@ -227,7 +261,7 @@ export default function BillingPage() {
                     ? "Loading..."
                     : subscription?.tier === plan.id
                     ? "Current Plan"
-                    : plan.id === "enterprise" ? "Contact Sales" : "Go Pro"}
+                    : plan.id === "enterprise" ? "Go Enterprise" : "Go Pro"}
                 </button>
               )}
             </div>
